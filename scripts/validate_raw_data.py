@@ -22,7 +22,7 @@ import pandera as pa
     help="Path to save the processed data.",
     type=click.Path(file_okay=False),
 )
-def validate_raw_data(input_path, processed_data_path):
+def validate_raw_data(input_path, processed_data_path, seed):
     """
     Script to validate and clean wine quality data.
     Validate the raw data is step 1 of data validation done by pandera before data splitting. 

@@ -12,7 +12,7 @@ import click
 @click.argument("output_dir", type=click.Path())
 def eda(input_data, output_dir):
     """
-    Perform EDA as described in the provided notebook and save the results.
+    Perform EDA on training data and save the results.
 
     INPUT_DATA: Path to the input dataset (CSV file).
     OUTPUT_DIR: Directory to save the results (charts and analysis).

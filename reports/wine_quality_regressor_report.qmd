@@ -1,54 +1,33 @@
 ---
 title: Analysis of Wine Quality and Prediction Using Logistic Regression
-author: "Alix, Paramveer, Susannah, Zoe"
-date: "2024/12/08"
-format: 
-    html:
-        toc: true
-        toc-depth: 4
-        toc-title: Contents
-    pdf:
-        toc: true
-        toc-depth: 4
-        toc-title: Contents
+author: 'Alix, Paramveer, Susannah, Zoe'
+date: 2024/12/08
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
+  pdf:
+    toc: true
+    toc-depth: 4
+    toc-title: Contents
 bibliography: references.bib
 execute:
   echo: false
   warning: false
 editor: source
-jupyter: python3
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.16.4
+  kernelspec:
+    display_name: 'Python [conda env:522]'
+    language: python
+    name: conda-env-522-py
 ---
-
-
-```{python}
-from IPython.display import Markdown, display
-# from tabulate import tabulate
-
-import pandas as pd
-import numpy as np
-from ucimlrepo import fetch_ucirepo 
-from sklearn.model_selection import train_test_split
-import altair as alt
-import altair_ally as aly
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import make_column_transformer
-from sklearn.pipeline import make_pipeline
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
-from sklearn.model_selection import StratifiedKFold
-
-from sklearn.model_selection import RandomizedSearchCV
-import scipy.stats as stats
-
-from sklearn.metrics import accuracy_score
-
-import warnings
-warnings.filterwarnings('ignore', category=FutureWarning)
-import os
-import pandera as pa
-```
 
 ## Summary
 
@@ -123,92 +102,18 @@ The Logistic Regression algorithm was used to build a classification model to pr
 
 ## Results and Discussion
 
+````{python}
 ```{python}
-# read data
-raw_data = pd.read_csv('../data/raw/wine_quality.csv')
-
-# reorder columns
-raw_data['quality'] = raw_data.pop('quality')
-
-# validate data
-schema = pa.DataFrameSchema(
-    {
-        "color": pa.Column(str, pa.Check.isin(["red", "white"])),
-        "fixed_acidity": pa.Column(float, pa.Check.between(0, 16), nullable=True),
-        "volatile_acidity": pa.Column(float, pa.Check.between(0, 1.8), nullable=True),
-        "citric_acid": pa.Column(float, pa.Check.between(0, 1.4), nullable=True), 
-        "residual_sugar": pa.Column(float, pa.Check.between(0, 30), nullable=True),
-        "chlorides": pa.Column(float, pa.Check.between(0, 0.7), nullable=True),
-        "free_sulfur_dioxide": pa.Column(float, pa.Check.between(0, 160), nullable=True),
-        "total_sulfur_dioxide": pa.Column(float, pa.Check.between(0, 400), nullable=True),
-        "density": pa.Column(float, pa.Check.between(0, 1.5), nullable=True),
-        "pH": pa.Column(float, pa.Check.between(0, 5), nullable=True),
-        "sulphates": pa.Column(float, pa.Check.between(0, 2.5), nullable=True),
-        "alcohol": pa.Column(float, pa.Check.between(9, 15), nullable=True),
-        "quality": pa.Column(float, pa.Check.between(1, 10), nullable=True)
-    },
-    checks=[
-        pa.Check(lambda df: ~df.duplicated().any(), error="Duplicate rows found."),
-        pa.Check(lambda df: ~(df.isna().all(axis=1)).any(), error="Empty rows found.")
-    ],
-    drop_invalid_rows=True
-)
-
-clean_data = schema.validate(raw_data, lazy=True).drop_duplicates().dropna(how="all")
-
-# Split training and testing data
-train_df, test_df = train_test_split(clean_data, test_size=0.2, random_state=522)
-
-# Store split data in data folder
-train_df.to_csv('../data/processed/training_set.csv', index=False)
-test_df.to_csv('../data/processed/test_set.csv', index=False)
-
-# Split dataset
-X_train, X_test, y_train, y_test = (train_df.drop(columns='quality'), test_df.drop(columns='quality'),
-                                    train_df['quality'], test_df['quality']
-                                    )
-
-numeric_features = X_train.select_dtypes(include='number').columns.tolist()
-binary_features = ['color']
-
-# Make column transformer
-preprocessor = make_column_transformer(
-    (OneHotEncoder(drop='if_binary'), binary_features),
-    (StandardScaler(), numeric_features)
-)
-
-# Make pipeline using StandardScaler and LogisticRegression
-model = make_pipeline(
-    preprocessor,
-    LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=2000)
-)
-
-# Define parameter distribution
-param_dist = {
-    'logisticregression__C': stats.uniform(0.001, 100),
-}
-
-# Perform randomized search
-random_search = RandomizedSearchCV(model, param_distributions=param_dist,
-                                   cv=3, # The least populated class in y has only 4 members, which is less than n_splits=5.
-                                   n_iter=50,
-                                   scoring='accuracy', random_state=42)
-random_search.fit(X_train, y_train)
-best_C = round(random_search.best_params_['logisticregression__C'], 3)
+import pandas as pd
+results_df = pd.read_csv("../results/tables/model_results.csv").round(2)
 ```
+````
 
-We split and transform the data (i.e. wine color into binary variable and using standard scalers for all other features) and build our logistic regression model. Using RandomSearchCV, we find the best hyperparamter C for the model: `{python} best_C`.
+We split and transform the data (i.e. wine color into binary variable and using standard scalers for all other features) and build our logistic regression model. Using RandomSearchCV, we find the best hyperparamter C for the model: `{python} results_df['best_C'].values[0]`.
 
-```{python}
-# Evaluate
-y_pred = random_search.predict(X_test)
-score = round(accuracy_score(y_test, y_pred), 3)
-```
+With our tuned model using the best C hyperparameter, we find the accuracy score of our predictions, comparing them to actual wine quality in the test set to be `{python} results_df['accuracy'].values[0]`.
 
-With our tuned model using the best C hyperparameter, we find the accuracy score of our predictions, comparing them to actual wine quality in the test set to be `{python} score`.
-
-While the performance of this model is not likely very useful in predicting wine quality, as we observed an accuracy score of `{python} score`, we gained insights on directions that could be further explored. First, we chose logistic regression as it is an intuitive first-step to approach a dataset with largely numeric features representing measurements of contents inside wines. Therefore, further analysis inspecting presence of linear relationships can be conducted using logistic regression results. We can then propose another model, e.g.Tree-based ones like Random Forest, to see whether it does better in wine quality prediction should there be weak linear relationships observed. Second, data cleaning might benefit our decision in choosing an optimal model as outliers have been widely observed across many features, according to our EDA in the previous section. It might be worth it to understand what all features represent and apply human knowledge to modify and "treat" the data so that it is more suitable for training than how it is currently presented. This involves speaking with professionals that understand wine makeup and qualities and seek their insights on reasons of outlier presence and their indications. We believe conducting the above two next-steps will give us a better knowledge foundation in order for us to choose a model that performs better in the future.
+While the performance of this model is not likely very useful in predicting wine quality, as we observed an accuracy score of `{python} results_df['accuracy'].values[0]`, we gained insights on directions that could be further explored. First, we chose logistic regression as it is an intuitive first-step to approach a dataset with largely numeric features representing measurements of contents inside wines. Therefore, further analysis inspecting presence of linear relationships can be conducted using logistic regression results. We can then propose another model, e.g.Tree-based ones like Random Forest, to see whether it does better in wine quality prediction should there be weak linear relationships observed. Second, data cleaning might benefit our decision in choosing an optimal model as outliers have been widely observed across many features, according to our EDA in the previous section. It might be worth it to understand what all features represent and apply human knowledge to modify and "treat" the data so that it is more suitable for training than how it is currently presented. This involves speaking with professionals that understand wine makeup and qualities and seek their insights on reasons of outlier presence and their indications. We believe conducting the above two next-steps will give us a better knowledge foundation in order for us to choose a model that performs better in the future.
 
 ## References
-
 

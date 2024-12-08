@@ -45,17 +45,18 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 # import pandera as pa
 
 @click.command()
-# @click.option('--training-data', type=str, help="Path to training data")
-# @click.option('--test-data', type=str, help="Path to test data")
+@click.option('--training-data', type=str, help="Path to training data")
+@click.option('--test-data', type=str, help="Path to test data")
+@click.option('--results-to', type=str, help="Path to directory where the model's best parameter and accuracy score will be written to")
 # @click.option('--preprocessor_to', type=str, help="Path to preprocessor object")
 # @click.option('--columns-to-drop', type=str, help="Optional: columns to drop")
 # @click.option('--data-to', type=str, help="Path to directory where processed data will be written to")
 # @click.option('--pipeline-to', type=str, help="Path to directory where the pipeline object will be written to")
 # @click.option('--plot-to', type=str, help="Path to directory where the plot will be written to")
-# @click.option('--seed', type=int, help="Random seed", default=522)
-def model_and_result(training_data, test_data, preprocessor_to, columns_to_drop, pipeline_to, plot_to, data_to, seed):
-    '''Fits a breast cancer classifier to the training data 
-    and saves the pipeline object.'''
+@click.option('--seed', type=int, help="Random seed", default=522)
+def model_and_result(training_data, test_data, results_to, seed):
+    '''Fits a wine quality logistic regression model to the training data 
+    and evaluates the model on the test data with accuracy score.'''
     np.random.seed(seed)
     set_config(transform_output="pandas")
 
@@ -112,6 +113,10 @@ def model_and_result(training_data, test_data, preprocessor_to, columns_to_drop,
     # Evaluate
     y_pred = random_search.predict(X_test)
     accuracy_score(y_test, y_pred)
+
+    # Save best parameter and accuracy scores
+    model_results = pd.DataFrame({'best_C': [random_search.best_params_], {'accuracy': [accuracy_score]})
+    model_results.to_csv(os.path.join(results_to, "model_results.csv"), index=False)
 
 if __name__ == '__main__':
     model_and_result()
